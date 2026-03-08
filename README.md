@@ -128,7 +128,7 @@ The platform utilizes a multi-model ML stack for high-precision ad targeting and
 - **RL Bidding Agent (`rl_bidding_agent.py`)**
   - **Architecture**: PPO (Proximal Policy Optimization)
   - **Usage**: A reinforcement learning agent that manages budget pacing and dynamic bidding to maximize ROI within campaign constraints.
-  - **Key Method**: `agent.select_action(state)` returns the optimal bid adjustment for the current auction.
+  - **Key Method**: `agent.act(state)` returns the optimal bid adjustment for the current auction.
 
 ### Privacy Measurement (`measurement/attribution/probabilistic.py`)
 - Probabilistic attribution using Shapley value decomposition
