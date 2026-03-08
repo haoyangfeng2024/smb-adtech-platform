@@ -1,62 +1,79 @@
 # Machine Learning Models Overview
 
-The SMB AdTech Platform uses a multi-layered ML stack to optimize advertising performance while maintaining privacy.
+The SMB AdTech Platform uses a multi-layered ML stack to optimize advertising performance while maintaining privacy. All models are integrated via `api/services/bidding_service.py` with lazy loading and multi-tier graceful degradation.
+
+## Integration Architecture (Actual Call Chain)
+
+```
+Bid Request (campaign + inventory context)
+        │
+        ▼
+BiddingService._lazy_load()   ← loads models on first request, non-blocking
+        │
+        ├─ 1. predict_ctr()
+        │       ├── DeepFM          → pCTR  (priority 1)
+        │       ├── sklearn GBM     → pCTR  (fallback 2, if PyTorch unavailable)
+        │       └── Bayesian smoothing heuristic  (fallback 3)
+        │
+        ├─ 2. GAT ad_match_score   = normalize(pCTR × 10)
+        │       └── (full GAT inference in next iteration)
+        │
+        ├─ 3. get_bid_adjustment()
+        │       ├── PPO Agent.act(state, deterministic=True)  → δ ∈ [-1, 1]
+        │       └── 0.0 if PPO unavailable
+        │
+        └─ 4. final_bid = base_bid × (1 + δ)
+               ecpm     = final_bid × pCTR × 1000
+               model_version = "deepfm+ppo" | "heuristic"
+```
+
+**Response time target:** < 50ms end-to-end
+
+---
 
 ## 1. GBM Baseline (`ml/models/bidding_model.py`)
 
-- **Core Algorithm**: Gradient Boosting Classifier (scikit-learn) + Calibrated probability estimation
-- **Inputs**: Flattened feature vectors — campaign params (budget, bid, age), device type, inventory source, time-of-day, historical CTR/CVR
+- **Core Algorithm**: Gradient Boosting Classifier (scikit-learn) + calibrated probability estimation
+- **Inputs**: Feature vectors — campaign params (budget, bid, age), device type, inventory source, time-of-day, historical CTR/CVR
 - **Outputs**: Win probability score `(float, [0, 1])` + recommended bid price
-- **Scenario**: Fast, reliable baseline for win-probability estimation. Deployed in early campaign stages when data is sparse; supports warm-start incremental learning.
-- **Relationship**: Provides benchmark metrics for DeepFM and PPO agent; also serves as fallback when deep models are unavailable.
+- **Scenario**: Fast baseline for win-probability estimation; used in early campaign stages when data is sparse. Supports warm-start incremental learning.
+- **Relationship**: Primary fallback when PyTorch models are unavailable; also provides benchmark metrics for DeepFM.
 
 ---
 
 ## 2. DeepFM CTR Prediction (`ml/models/deep_ctr_model.py`)
 
-- **Core Algorithm**: Deep Factorization Machine — FM layer (second-order feature interactions) + Deep MLP layers, SHA-256 privacy-preserving feature hashing
-- **Inputs**: High-dimensional sparse features (ad ID, publisher category, device, geo) encoded via hash trick — no user-level PII required
+- **Core Algorithm**: Deep Factorization Machine — FM layer (second-order feature interactions) + Deep MLP; SHA-256 privacy-preserving feature hashing
+- **Inputs**: High-dimensional sparse features (ad format, device, geo, bidding strategy, hour, day-of-week, campaign_id hash) — no user-level PII
 - **Outputs**: Predicted click-through rate `pCTR (float, [0, 1])`
-- **Scenario**: CTR prediction for display, native, and in-app ad formats across open-internet inventory. Handles cold-start via feature hashing.
-- **Relationship**: pCTR feeds into the PPO bidding agent's state vector; outperforms GBM baseline on high-cardinality categorical features.
+- **Scenario**: CTR prediction for display, native, and in-app ad formats. Handles cold-start via feature hashing. Outperforms GBM on high-cardinality categorical features.
+- **Integration**: `BiddingService.predict_ctr()` calls `DeepFMModel.predict(X)` with hashed feature matrix
 
 ---
 
 ## 3. Graph Attention Network (`ml/models/gnn_ad_model.py`)
 
-- **Core Algorithm**: Multi-head Graph Attention Network (GAT) with heterogeneous node encoding — ad slots, content categories, temporal context nodes; edge-weighted attention on co-occurrence and behavioral similarity
+- **Core Algorithm**: Multi-head GAT with heterogeneous node encoding — ad slots, content categories, temporal context; edge-weighted attention on co-occurrence and behavioral similarity
 - **Inputs**: Anonymous interaction graph — nodes are contextual entities (no user IDs), edges represent co-occurrence frequency or semantic similarity
-- **Outputs**: Node embeddings for ad slots and content categories; ad feedback score prediction
+- **Outputs**: Node embeddings for ad slots and content categories; ad feedback score `[0, 1]`
 - **Scenario**: Models anonymous user interaction patterns without device-level identifiers. Privacy-compliant with Apple ATT and post-cookie environments.
-- **Relationship**: GAT embeddings augment DeepFM input features; also provides context signals to the PPO agent's observation space.
+- **Integration**: Currently initialized with random weights for demo; ad_match_score normalized from pCTR as interim until full training pipeline is set up.
 
 ---
 
 ## 4. PPO Reinforcement Learning Bidding Agent (`ml/models/rl_bidding_agent.py`)
 
-- **Core Algorithm**: Proximal Policy Optimization (PPO) with Actor-Critic architecture, Generalized Advantage Estimation (GAE), clipped surrogate objective
-- **Inputs**: State vector — campaign budget utilization, recent win rate, market floor price distribution, time features, pCTR from DeepFM, GAT context embeddings
-- **Outputs**: Bid adjustment factor `(continuous action, [0.5×, 2.0×] of base bid)`; value estimate for critic
-- **Scenario**: Dynamic bid optimization across campaign lifecycle. Maximizes ROI under budget constraints via reinforcement learning from win/loss feedback signals.
-- **Relationship**: Integrates all upstream model outputs (GBM win probability, DeepFM pCTR, GAT embeddings) into a unified bidding decision. Top of the ML stack.
+- **Core Algorithm**: Proximal Policy Optimization — Actor-Critic with GAE (Generalized Advantage Estimation), PPO-CLIP objective, entropy bonus, orthogonal weight initialization
+- **Inputs**: State vector — campaign spend_ratio, pCTR (from DeepFM), market conditions, time features
+- **Outputs**: Bid adjustment factor `δ (continuous, [-1, 1])` via `act(state, deterministic=True)`
+- **Scenario**: Dynamic bid optimization across campaign lifecycle. Maximizes ROI under budget constraints via reinforcement learning from win/loss signals.
+- **Integration**: `BiddingService.get_bid_adjustment()` → `PPOBiddingAgent.act()` → `final_bid = base_bid × (1 + δ)`
 
 ---
 
-## Model Integration Architecture
+## Deployment Notes
 
-```
-Raw Bid Request
-      │
-      ├─► GBM Baseline ──────────────────► win_prob
-      │
-      ├─► DeepFM CTR Model ──────────────► pCTR
-      │
-      ├─► Graph Attention Network ────────► context_embedding
-      │
-      └─► PPO Bidding Agent ◄─────────────┘
-              │  (state = win_prob + pCTR + context_embedding + budget_state)
-              │
-              └─► final_bid_price ──► Ad Exchange
-```
-
-All models operate without user-level persistent identifiers, ensuring compliance with ATT, GDPR, and emerging U.S. state privacy regulations.
+- All PyTorch models are **lazy-loaded** on first request (no startup blocking)
+- Graceful degradation: `deepfm+ppo` → `gbm` → `heuristic` (Bayesian smoothing)
+- `model_version` field in `BidDecision` response indicates which tier was used
+- No persistent user identifiers flow into any model layer
