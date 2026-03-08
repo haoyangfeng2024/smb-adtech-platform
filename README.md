@@ -98,7 +98,9 @@ smb-adtech-platform/
 │   └── services/           # Business logic layer
 ├── ml/
 │   └── models/
-│       └── bidding_model.py    # Gradient Boosting + RL bidding
+│       ├── deep_ctr_model.py   # Deep Click-Through Rate prediction (PyTorch)
+│       ├── gnn_ad_model.py     # Graph Neural Network for ad-user graph (PyTorch)
+│       └── rl_bidding_agent.py # Reinforcement Learning bidding agent (PyTorch)
 ├── measurement/
 │   └── attribution/
 │       └── probabilistic.py   # Privacy-preserving attribution
@@ -110,11 +112,23 @@ smb-adtech-platform/
 
 ## Technical Highlights
 
-### ML Bidding Engine (`ml/models/bidding_model.py`)
-- Gradient Boosting Classifier for win probability estimation
-- Feature engineering: CTR history, floor price ratio, device type, time-of-day
-- Real-time inference < 10ms latency target
-- Continuous learning from win/loss feedback
+### ML Engine (PyTorch)
+The platform utilizes a multi-model ML stack for high-precision ad targeting and bidding optimization:
+
+- **Deep CTR Prediction (`deep_ctr_model.py`)**
+  - **Architecture**: DeepFM (Deep Factorization Machines)
+  - **Usage**: Predicts click-through rates by modeling low-order feature interactions (FM) and high-order interactions (Deep).
+  - **Key Method**: `model.predict(user_features, ad_features)` returns click probability [0, 1].
+
+- **GNN Ad Graph (`gnn_ad_model.py`)**
+  - **Architecture**: GAT (Graph Attention Network)
+  - **Usage**: Models relationships between ads, users, and contexts as a heterogeneous graph to discover hidden audience segments.
+  - **Key Method**: `model.get_node_embeddings(graph_data)` for vector-based similarity matching.
+
+- **RL Bidding Agent (`rl_bidding_agent.py`)**
+  - **Architecture**: PPO (Proximal Policy Optimization)
+  - **Usage**: A reinforcement learning agent that manages budget pacing and dynamic bidding to maximize ROI within campaign constraints.
+  - **Key Method**: `agent.select_action(state)` returns the optimal bid adjustment for the current auction.
 
 ### Privacy Measurement (`measurement/attribution/probabilistic.py`)
 - Probabilistic attribution using Shapley value decomposition
