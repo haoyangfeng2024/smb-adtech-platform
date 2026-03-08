@@ -59,7 +59,30 @@ uvicorn api.main:app --reload
 docker-compose up -d
 ```
 
-### Example API Calls
+## Running Tests
+
+The platform includes a comprehensive test suite covering the bidding logic, ML fallbacks, and API endpoints.
+
+### Prerequisites
+- `pytest`
+- `pytest-asyncio`
+
+### Run all tests
+```bash
+pytest tests/
+```
+
+### Run specific integration tests
+```bash
+pytest -m integration tests/
+```
+
+The test suite covers 38+ test cases, including:
+- **Full ML Stack**: Validates the DeepFM -> GAT -> PPO pipeline.
+- **Fallback Resilience**: Ensures the system gracefully degrades from PyTorch to sklearn to heuristic rules.
+- **Boundary Conditions**: Tests zero-budget, extreme bid values, and missing fields.
+
+## Example API Calls
 
 ```bash
 # Health check
