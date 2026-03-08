@@ -40,9 +40,15 @@ Five integrated components form the platform:
 ### Installation
 
 ```bash
-git clone https://github.com/kouji175/smb-adtech-platform.git
+git clone https://github.com/haoyangfeng2024/smb-adtech-platform.git
 cd smb-adtech-platform
+
+# 1. Install core dependencies (FastAPI, Redis, Scikit-learn GBM)
 pip install -r requirements.txt
+
+# 2. (Optional) Install PyTorch for full Deep Learning capability (DeepFM, GAT, PPO)
+# Without PyTorch, the BiddingService gracefully degrades to sklearn GBM.
+pip install -r requirements-dl.txt
 ```
 
 ### Run the API

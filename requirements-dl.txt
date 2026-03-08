@@ -1,0 +1,3 @@
+# ===== Deep Learning / PyTorch Models =====
+# Required to enable DeepFM, GAT, and PPO models in the Bidding Service
+torch>=2.0.0
