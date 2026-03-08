@@ -1,0 +1,41 @@
+# ===== Web Framework =====
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+pydantic==2.7.1
+pydantic-settings==2.2.1
+
+# ===== Database =====
+sqlalchemy==2.0.30
+asyncpg==0.29.0
+alembic==1.13.1
+
+# ===== Caching =====
+redis==5.0.4
+hiredis==2.3.2
+
+# ===== ML / Data Science =====
+scikit-learn==1.4.2
+numpy==1.26.4
+pandas==2.2.2
+joblib==1.4.2
+xgboost==2.0.3
+
+# ===== HTTP Client =====
+httpx==0.27.0
+
+# ===== Auth & Security =====
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.9
+
+# ===== Observability =====
+prometheus-client==0.20.0
+structlog==24.1.0
+
+# ===== Testing =====
+pytest==8.2.0
+pytest-asyncio==0.23.7
+
+# ===== Utilities =====
+python-dotenv==1.0.1
+celery==5.4.0

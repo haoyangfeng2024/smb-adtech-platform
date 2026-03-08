@@ -1,0 +1,165 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────
+# SMB AdTech Platform — Docker Compose
+# 服务：api + frontend + postgres + redis
+# ─────────────────────────────────────────────
+
+networks:
+  adtech-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+
+services:
+
+  # ──────────────────────────────────────────
+  # PostgreSQL — 主数据库
+  # ──────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: adtech-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: adtech
+      POSTGRES_PASSWORD: adtech_secret
+      POSTGRES_DB: adtech_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # 初始化 SQL 脚本（可选）
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U adtech -d adtech_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - adtech-net
+
+  # ──────────────────────────────────────────
+  # Redis — 缓存 + 竞价索引 + 限流
+  # ──────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: adtech-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --save 60 1
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - adtech-net
+
+  # ──────────────────────────────────────────
+  # API — FastAPI 后端
+  # ──────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: adtech-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://adtech:adtech_secret@postgres:5432/adtech_db
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: change-me-in-production-use-random-32-bytes
+      ENVIRONMENT: development
+      LOG_LEVEL: info
+      # ML 模型路径
+      BIDDING_MODEL_PATH: /app/ml/artifacts/bidding_model.pkl
+    ports:
+      - "8000:8000"
+    volumes:
+      # 热重载：挂载源码
+      - ./api:/app/api
+      - ./ml:/app/ml
+      - ./measurement:/app/measurement
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - adtech-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.smb-adtech.local`)"
+
+  # ──────────────────────────────────────────
+  # Frontend — React TypeScript
+  # ──────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+      args:
+        REACT_APP_API_URL: http://localhost:8000/api/v1
+    container_name: adtech-frontend
+    restart: unless-stopped
+    environment:
+      REACT_APP_API_URL: http://api:8000/api/v1
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    volumes:
+      # 热重载
+      - ./frontend/src:/app/src
+      - /app/node_modules   # 防止 node_modules 被宿主机覆盖
+    depends_on:
+      - api
+    networks:
+      - adtech-net
+
+  # ──────────────────────────────────────────
+  # Celery Worker — 异步任务（归因计算、报表生成）
+  # ──────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: adtech-worker
+    restart: unless-stopped
+    command: celery -A api.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      DATABASE_URL: postgresql+asyncpg://adtech:adtech_secret@postgres:5432/adtech_db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - adtech-net
+
+  # ──────────────────────────────────────────
+  # Nginx — 反向代理（可选，生产环境推荐）
+  # ──────────────────────────────────────────
+  # nginx:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - api
+  #     - frontend
+  #   networks:
+  #     - adtech-net
