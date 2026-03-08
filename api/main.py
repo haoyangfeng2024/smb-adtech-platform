@@ -60,9 +60,14 @@ async def lifespan(app: FastAPI):
     # TODO: 初始化 Redis 连接
     # app.state.redis = await aioredis.create_redis_pool(settings.REDIS_URL)
 
-    # TODO: 预热 ML 模型
-    # from ml.models.bidding_model import BiddingModel
-    # app.state.bid_model = BiddingModel.load("ml/artifacts/bidding_model.pkl")
+    # 预热 BiddingService（避免首次请求冷启动 ~137ms）
+    try:
+        from api.services.bidding_service import get_bidding_service
+        svc = get_bidding_service()
+        svc._lazy_load()
+        logger.info("app.bidding_service_warmed")
+    except Exception as e:
+        logger.warning("app.bidding_service_warmup_failed", error=str(e))
 
     logger.info("app.ready")
     yield
