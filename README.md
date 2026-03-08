@@ -1,91 +1,141 @@
 # SMB AdTech Platform
 
+> AI-powered, privacy-compliant digital advertising infrastructure for U.S. small and medium-sized businesses.
+
+![Architecture](docs/screenshots/architecture.png)
+
 ## Overview
-The SMB AdTech Platform is an AI-driven advertising infrastructure designed specifically for Small and Medium-sized Businesses (SMBs) in the United States. Our mission is to provide high-performance, privacy-compliant advertising tools that were previously only accessible to large enterprises. 
 
-By leveraging cutting-edge machine learning and a privacy-first architecture, we help SMBs navigate the complex digital advertising landscape while ensuring strict adherence to privacy regulations and maximizing ROI.
+The SMB AdTech Platform democratizes access to enterprise-grade programmatic advertising for the 36.2 million small and medium-sized businesses (SMBs) in the United States. Most SMBs are locked into a handful of "walled garden" platforms (Meta, Google, TikTok) with no access to the broader open internet and in-app inventory ecosystem.
 
-## Core Features
-- **AI-Powered Ad Creation**: Simplifies the campaign setup process for non-experts.
-- **Privacy-First Measurement**: Advanced attribution that respects user privacy.
-- **Real-time ML Bidding**: Optimizes ad spend across multiple platforms.
-- **SMB-Centric Dashboard**: Intuitive interface for managing complex ad operations.
+This platform provides:
+- **Cross-publisher ad delivery** — reach audiences across open internet, mobile apps, and CTV
+- **Privacy-first measurement** — probabilistic attribution without user-level tracking
+- **AI-assisted campaign management** — LLM-powered assistant for non-expert advertisers
+- **Automated ML bidding** — gradient boosting + reinforcement learning for real-time optimization
 
 ## Architecture
-The platform is composed of five primary components:
-1. **Self-Service Frontend**: A React-based dashboard for business owners.
-2. **AI Marketing Assistant**: LLM-driven interface for campaign strategy and creative generation.
-3. **Unified Ad Delivery API**: High-throughput gateway for cross-platform ad execution.
-4. **ML Bidding & Optimization Engine**: Real-time models for dynamic bid adjustment.
-5. **Privacy Measurement Engine**: Secure analytics and attribution tracking.
 
-## Quick Start
-### Prerequisites
-- Node.js v20+
-- Docker & Docker Compose
-- API Keys for supported Ad Networks (Google, Meta, etc.)
+Five integrated components form the platform:
 
-### Installation
-```bash
-git clone https://github.com/your-repo/smb-adtech-platform.git
-cd smb-adtech-platform
-cp .env.example .env
-npm install
-```
-
-### Running the Platform
-```bash
-docker-compose up -d
-npm run dev
-```
+| Component | Tech Stack | Role |
+|-----------|-----------|------|
+| Self-Serve Frontend | React + TypeScript | Campaign creation & management UI |
+| AI Marketing Assistant | FastAPI + LLM | Real-time campaign guidance |
+| Ad Delivery API | FastAPI + Redis | Bid request routing & ad serving |
+| ML Bidding Engine | Python + GBM/RL | Real-time bid optimization |
+| Privacy Measurement | Python + Synthetic Data | Attribution without tracking |
 
 ## API Demo
 
-### Start the server
+![API Demo](docs/screenshots/api-demo.png)
+
+## Quick Start
+
+### Prerequisites
+- Python 3.11+
+- Docker & Docker Compose
+- Redis (or use docker-compose)
+
+### Installation
+
 ```bash
+git clone https://github.com/kouji175/smb-adtech-platform.git
+cd smb-adtech-platform
 pip install -r requirements.txt
-uvicorn api.main:app --reload
-# Swagger UI: http://localhost:8000/docs
 ```
 
-### Create a Campaign
+### Run the API
+
 ```bash
+uvicorn api.main:app --reload
+# API available at http://localhost:8000
+# Swagger UI at http://localhost:8000/docs
+```
+
+### Run with Docker Compose
+
+```bash
+docker-compose up -d
+```
+
+### Example API Calls
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Create a campaign
 curl -X POST http://localhost:8000/api/v1/campaigns/ \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Summer Sale 2026",
     "advertiser_id": "adv_001",
-    "status": "active",
-    "budget": {"total": 5000.00, "daily": 200.00},
-    "bid_amount": 1.50,
-    "bidding_strategy": "cpc",
-    "start_date": "2026-03-08T00:00:00Z",
-    "targeting": {
-      "geo": {"countries": ["US"]},
-      "device": {"devices": ["mobile", "desktop"]}
-    }
+    "budget": {"total": 5000.0, "daily": 200.0, "currency": "USD"},
+    "bid_amount": 1.5,
+    "start_date": "2026-06-01T00:00:00Z"
   }'
-```
 
-### Submit a Bid Request (RTB)
-```bash
+# Submit a bid request
 curl -X POST http://localhost:8000/api/v1/bidding/bid \
   -H "Content-Type: application/json" \
   -d '{
-    "imp_id": "imp_abc123",
-    "site_id": "site_techblog",
+    "request_id": "req_abc123",
     "floor_price": 0.5,
-    "device_type": "mobile",
-    "geo": {"countries": ["US"]}
+    "inventory_type": "display",
+    "device_type": "mobile"
   }'
-# Response: bid_price, ad_markup, predicted_ctr, decision_ms
 ```
 
-### Health / Metrics
-```bash
-curl http://localhost:8000/health   # {"status":"ok"}
-curl http://localhost:8000/metrics  # Prometheus metrics
+## Project Structure
+
+```
+smb-adtech-platform/
+├── api/                    # FastAPI backend
+│   ├── main.py             # Application entry point
+│   ├── models/             # Pydantic data models
+│   ├── routers/            # API route handlers
+│   └── services/           # Business logic layer
+├── ml/
+│   └── models/
+│       └── bidding_model.py    # Gradient Boosting + RL bidding
+├── measurement/
+│   └── attribution/
+│       └── probabilistic.py   # Privacy-preserving attribution
+├── frontend/               # React + TypeScript UI (WIP)
+├── assistant/              # LLM assistant integration (WIP)
+├── docs/                   # Architecture docs & API reference
+└── docker-compose.yml      # Full stack orchestration
 ```
 
-## Mission
-This project aims to democratize high-end advertising technology for the American SMB sector. By focusing on technological innovation and privacy-first design, we ensure that digital small businesses have the tools to compete effectively while leading in privacy standards and data ethics.
+## Technical Highlights
+
+### ML Bidding Engine (`ml/models/bidding_model.py`)
+- Gradient Boosting Classifier for win probability estimation
+- Feature engineering: CTR history, floor price ratio, device type, time-of-day
+- Real-time inference < 10ms latency target
+- Continuous learning from win/loss feedback
+
+### Privacy Measurement (`measurement/attribution/probabilistic.py`)
+- Probabilistic attribution using Shapley value decomposition
+- Synthetic data generation for model training without PII
+- Compatible with post-ATT (Apple App Tracking Transparency) environments
+- No user-level identifiers required
+
+### Ad Delivery API (`api/routers/bidding.py`)
+- OpenRTB-compatible bid request/response format
+- Budget pacing with token bucket algorithm
+- Fraud detection hooks
+- Win notification handling
+
+## Roadmap
+
+- [ ] Frontend React dashboard
+- [ ] LLM-powered assistant integration
+- [ ] Multi-SSP supply integration
+- [ ] Real-time reporting dashboard
+- [ ] e-commerce conversion tracking
+
+## License
+
+MIT
