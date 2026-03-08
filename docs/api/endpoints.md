@@ -51,29 +51,58 @@ All requests must include a Bearer Token in the Authorization header.
 ```json
 {
   "campaign_id": "camp_789",
-  "base_bid": 1.0,
-  "adjustment": 0.25,
-  "final_bid": 1.25,
-  "predicted_ctr": 0.015,
-  "ad_match_score": 0.87,
-  "ecpm": 18.75,
-  "model_version": "deepfm+ppo",
-  "decision_ms": 12.5
+  "win_prob": 0.425,
+  "predicted_ctr": 0.084,
+  "context_embedding": [0.12, -0.05, 0.33, 0.07, 0.21, -0.18, 0.09, 0.44],
+  "ad_match_score": 0.509,
+  "base_bid": 2.5,
+  "bid_adjustment": -0.003,
+  "final_bid": 2.50,
+  "ecpm": 210.6,
+  "model_version": "deepfm+gat+ppo",
+  "decision_ms": 12.5,
+  "fallbacks": {
+    "gbm": true,
+    "deepfm": false,
+    "gat": false,
+    "ppo": false
+  }
 }
 ```
 
+**Response field reference:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `win_prob` | float [0,1] | GBM predicted auction win probability |
+| `predicted_ctr` | float [0,1] | DeepFM predicted click-through rate |
+| `context_embedding` | float[8] or null | GAT ad-slot embedding vector (truncated to 8 dims) |
+| `ad_match_score` | float [0,1] | GAT ad-content match score |
+| `base_bid` | float | Campaign configured bid amount |
+| `bid_adjustment` | float [-1,1] | PPO Agent output δ |
+| `final_bid` | float ≥ 0.01 | `base_bid × (1 + δ) × match_weight`, min 0.01 |
+| `ecpm` | float | `final_bid × pCTR × 1000` |
+| `model_version` | string | Active model backends (see below) |
+| `decision_ms` | float | End-to-end ML inference latency (ms) |
+| `fallbacks` | object | Per-layer fallback flags (`true` = used fallback) |
+
 **`model_version` values:**
-| Value | Meaning |
-|-------|---------|
-| `"deepfm+ppo"` | Full ML stack: DeepFM pCTR + PPO bid adjustment |
-| `"heuristic"` | PyTorch unavailable; using Bayesian smoothing fallback |
+
+| Value | Active layers |
+|-------|--------------|
+| `"deepfm+gat+ppo"` | Full 4-layer ML stack |
+| `"deepfm+gat"` | PPO unavailable, δ=0 |
+| `"gbm"` | PyTorch unavailable, GBM baseline only |
+| `"heuristic"` | All models unavailable, Bayesian smoothing |
+
+**`fallbacks` keys:** `gbm` / `deepfm` / `gat` / `ppo` — each is `true` when that layer fell back to its degraded mode.
 
 **Degradation tiers (automatic, transparent to caller):**
-1. **DeepFM + PPO** — primary path (PyTorch available)
+1. **DeepFM + GAT + PPO** — primary path (PyTorch + pretrained weights available)
 2. **sklearn GBM** — fallback if PyTorch import fails
-3. **Bayesian heuristic** — final fallback (`(clicks+0.1)/(impressions+100)`)
+3. **Bayesian heuristic** — final fallback: `win_prob = (clicks + 0.5) / (impressions + 100)`
 
-**`adjustment`**: PPO Agent output δ ∈ [-1, 1]; `final_bid = base_bid × (1 + δ)`, minimum `0.01`
+**`bid_adjustment`**: PPO Agent output δ ∈ [-1, 1]; `final_bid = base_bid × (1 + δ) × match_weight`, minimum `0.01`
 
 ### Update Bid Strategy
 - **PATCH** `/v1/bidding/strategy`
