@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adtech-api
+  labels:
+    app: adtech-api
+spec:
+  # 生产环境通常设为 3 个副本，确保高可用性
+  replicas: 3
+  selector:
+    matchLabels:
+      app: adtech-api
+  template:
+    metadata:
+      labels:
+        app: adtech-api
+    spec:
+      containers:
+      - name: api
+        image: haoyang/smb-adtech-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: adtech-secrets
+              key: database-url
+        - name: REDIS_URL
+          value: "redis://adtech-redis:6379/0"
+        # 资源限制：确保系统稳定性，防止单个容器耗尽宿主机资源
+        # 针对深度学习模型（DeepFM/GAT/PPO）增加资源上限，确保高并发下不 OOM
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "1000m"
+            memory: "2Gi"
+        # 存活探针：Kubernetes 自动重启崩溃的容器
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        # 就绪探针：确保只将流量发送到已初始化完成的容器
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
