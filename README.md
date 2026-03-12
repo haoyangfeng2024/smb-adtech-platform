@@ -8,6 +8,68 @@
 
 The SMB AdTech Platform democratizes access to enterprise-grade programmatic advertising for the 36.2 million small and medium-sized businesses (SMBs) in the United States. Most SMBs are locked into a handful of "walled garden" platforms (Meta, Google, TikTok) with no access to the broader open internet and in-app inventory ecosystem.
 
+## The Problem: Why This Matters
+
+### Current SMB Pain Points
+
+1. **Trapped in Walled Gardens** — U.S. SMBs rely heavily on Meta, Google, and TikTok, limiting access to premium inventory (Snapchat, Discord, mobile gaming, CTV).
+
+2. **Technical Barriers** — Enterprise DSPs (The Trade Desk, Adobe DSP) require $50K+ minimum spend and dedicated engineering teams. SMBs cannot afford this.
+
+3. **Privacy Regulations** — Apple's App Tracking Transparency (ATT) means only ~30% of users opt into tracking. Without user-level data, traditional measurement and optimization breaks down for SMBs.
+
+4. **Fragmented Workflow** — Managing multiple platform logins, budgets, and reporting is time-consuming for small teams.
+
+### How the SMB AdTech Platform Solves This
+
+Our platform provides a **self-serve, AI-powered advertising infrastructure** specifically designed for SMBs:
+
+| Capability | Problem Solved |
+|-----------|---------------|
+| **Cross-Publisher Delivery** | SMBs can access Snapchat, Discord, mobile apps, and the open internet — not just Meta/Google |
+| **Privacy-First Attribution** | Probabilistic models work without user IDs, compliant with ATT and emerging U.S. state privacy laws |
+| **LLM Marketing Assistant** | Non-technical users create and optimize campaigns via natural language — no DSP expertise required |
+| **Automated ML Bidding** | DeepFM + Graph Attention Networks + PPO reinforcement learning optimize bids in real-time, maximizing ROI |
+
+### Real-World Use Case
+
+**Example**: A bakery in Texas wants to run a Mother's Day promotion.
+
+- **Traditional Approach**: Create a Facebook/Instagram ad manually, limited reach, high cost-per-acquisition.
+- **With Our Platform**: User types "I want to promote my bakery for Mother's Day" → LLM generates ad copy → System automatically bids across 100+ apps and websites → Real-time ROI dashboard shows performance.
+
+## How Automated Bidding Works (Real-Time Bidding)
+
+Our ML-powered bidding engine makes decisions in **under 50 milliseconds**:
+
+```
+1. Ad Exchange sends bid request (OpenRTB format)
+   ↓
+2. API receives: device type, geo, ad slot, floor price
+   ↓
+3. ML Inference Pipeline:
+   ├── DeepFM → predicts Click-Through Rate (pCTR)
+   ├── GAT → calculates ad-content relevance score
+   ├── PPO Agent → computes bid adjustment factor δ
+   └── GBM → win probability (fallback)
+   ↓
+4. Calculate final bid: final_bid = base_bid × (1 + δ)
+   ↓
+5. Return bid to Exchange (must complete in <100ms)
+```
+
+### Comparison: Traditional DSPs vs. Our Platform
+
+| Feature | Enterprise DSP (Trade Desk, Adobe) | SMB AdTech Platform |
+|---------|----------------------------------|---------------------|
+| **Target** | Fortune 500 companies | 36.2M U.S. SMBs |
+| **Minimum Spend** | $50,000+/month | $500/month |
+| **Technical Skill Required** | DSP certified engineers | No-code, AI-assisted |
+| **Privacy Compliance** | Relies on third-party cookies | Privacy-first, no user tracking |
+| **Inventory Reach** | Limited to major platforms | Open internet + apps + CTV |
+
+**Bottom Line**: This platform brings enterprise-grade programmatic advertising to businesses that previously couldn't afford it — without requiring technical expertise or compromising user privacy.
+
 This platform provides:
 - **Cross-publisher ad delivery** — reach audiences across open internet, mobile apps, and CTV
 - **Privacy-first measurement** — probabilistic attribution without user-level tracking
