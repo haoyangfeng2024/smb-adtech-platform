@@ -38,6 +38,7 @@ The frontend communicates with the FastAPI backend defined in the `api/` directo
 1. **Fetching Metrics**: The Dashboard pulls aggregated data from `/api/v1/analytics/attribution` to render ROI graphs.
 2. **Campaign Deployment**: The Campaign form sends a `POST` request to `/api/v1/campaigns/`.
 3. **AI Assistance**: The creative generation field calls `/api/v1/ai/generate-creative` to fetch suggestions from the LLM based on user input.
+4. **ML Model Transparency**: The API service layer is configured to handle advanced ML metadata (e.g., `model_version`, `fallbacks`, `ad_match_score`), allowing the UI to surface transparency indicators regarding the AI decision-making process.
 
 ## 4. Accessibility & Responsive Design
 

@@ -31,7 +31,9 @@ Creating a campaign is a streamlined 3-step process designed for busy business o
 
 ### Step 3: Audience & Targeting
 - **Target Audience**: Describe your ideal customer. Our **GNN Ad Graph** will translate this into anonymized audience segments.
-- **Geographic Targeting**: Select specific U.S. states or regions to focus your spend.
+- **Country Targeting**: Specify the countries where your ads should appear.
+- **Device Targeting**: Choose the devices you want to target (e.g., Mobile, Desktop, Tablet) to optimize for different user experiences.
+- **Geographic Precision**: Refine your reach to specific U.S. states or regions to ensure your budget is spent where it matters most.
 
 ## 3. Privacy & Compliance
 
