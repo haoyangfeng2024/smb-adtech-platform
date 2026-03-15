@@ -23,13 +23,30 @@ This document outlines the user interface and interaction design for the SMB AdT
 ### C. Privacy & Security Indicator
 - A persistent "Shield" icon in the navigation bar that, when clicked, shows a summary of the anonymization process (e.g., "Active: SHA-256 ID Anonymization," "No PII stored").
 
-## 3. Technical Specification (Frontend MVP)
+## 3. Data Visualization & Reporting (Sprint 3 Phase 2)
+
+To empower SMBs with actionable data, the dashboard integrates advanced Recharts-based visualizations.
+
+### 📊 ROI Trend Analysis (Line Chart)
+- **Data Source**: Aggregated historical performance from `/api/v1/analytics/attribution`.
+- **Visualization**: A 7-day rolling line chart comparing "Actual ROI" vs. "ML-Projected ROI".
+- **Key Metric**: Surfacing the efficiency of the PPO Bidding Agent in maximizing return on ad spend.
+
+### 🌪️ Conversion Funnel (Funnel Chart)
+- **Visual Path**: Ad Impressions → Clicks → Conversions (Leads/Sales).
+- **Insight**: Highlights where in the customer journey users are dropping off, allowing SMBs to optimize their creative assets or landing pages.
+
+### ⏱️ Budget Utilization (Gauge/Donut Chart)
+- **Real-time Monitoring**: A circular progress bar showing "Spent Amount" relative to the "Daily Budget Cap".
+- **AI Pacing**: A status label indicating if the **PPO Agent** is currently "Pacing Aggressively" (high opportunity) or "Pacing Conservatively" (low liquidity).
+
+### 📈 PPO Bidding Dynamics (Live Curve)
+- **ML Transparency & Accountability**: A specialized chart showing real-time bid adjustments (δ ∈ [-1, 1]) executed by the PPO RL Agent. 
+- **Strategic Insight**: This visualization serves as a primary tool for "Explainable AI" (XAI). It demonstrates to the SMB user exactly how the AI is dynamically adjusting strategy based on auction pressure and budget pacing, providing a level of transparency and accountability that exceeds industry standard "black-box" bidding algorithms.
+
+## 4. Technical Specification (Frontend MVP)
 
 - **Framework**: React 18 (Vite-based).
 - **Styling**: Tailwind CSS for responsive and modern aesthetics.
-- **Iconography**: Heroicons for standard UI actions.
-- **State Management**: React Context or Zustand for campaign configuration flow.
+- **Visualization Library**: **Recharts** for performance metrics.
 - **API Integration**: Axios for communication with the FastAPI backend endpoints defined in `docs/api/endpoints.md`.
-
----
-*Note: This design ensures that the high-tech backend (DeepFM, PPO) is translated into a competitive advantage for U.S. small businesses through a professional and intuitive interface.*
