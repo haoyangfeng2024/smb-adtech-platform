@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { TrendingUp, TrendingDown, DollarSign, MousePointer, Eye, ArrowUpRight } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, MousePointer, Eye, ArrowUpRight, Target, Users } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from 'recharts'
 
 interface Stats {
   totalSpend: number
@@ -9,23 +10,46 @@ interface Stats {
   conversions: number
   ctr: number
   roas: number
+  budgetUsed: number
 }
 
+const roiData = [
+  { date: 'Mar 9', roas: 2.8 },
+  { date: 'Mar 10', roas: 3.1 },
+  { date: 'Mar 11', roas: 2.9 },
+  { date: 'Mar 12', roas: 3.4 },
+  { date: 'Mar 13', roas: 3.2 },
+  { date: 'Mar 14', roas: 3.5 },
+  { date: 'Mar 15', roas: 3.8 },
+]
+
+const funnelData = [
+  { name: 'Impressions', value: 2456789, fill: '#3B82F6' },
+  { name: 'Clicks', value: 45678, fill: '#10B981' },
+  { name: 'Conversions', value: 2345, fill: '#F59E0B' },
+]
+
+const budgetData = [
+  { name: 'Spent', value: 4500 },
+  { name: 'Remaining', value: 5500 },
+]
+
 export default function Dashboard() {
-  const [stats, setStats] = useState<Stats>({
+  const [stats] = useState<Stats>({
     totalSpend: 12450,
     impressions: 2456789,
     clicks: 45678,
     conversions: 2345,
     ctr: 1.86,
     roas: 3.2,
+    budgetUsed: 45,
   })
 
   const metricCards = [
     { name: 'Total Spend', value: `$${stats.totalSpend.toLocaleString()}`, change: '+12%', trend: 'up', icon: DollarSign },
     { name: 'Impressions', value: (stats.impressions / 1000).toFixed(1) + 'K', change: '+8%', trend: 'up', icon: Eye },
     { name: 'Clicks', value: (stats.clicks / 1000).toFixed(1) + 'K', change: '+15%', trend: 'up', icon: MousePointer },
-    { name: 'CTR', value: stats.ctr + '%', change: '+0.2%', trend: 'up', icon: TrendingUp },
+    { name: 'CTR', value: stats.ctr + '%', change: '+0.2%', trend: 'up', icon: Target },
     { name: 'ROAS', value: stats.roas + 'x', change: '+0.5x', trend: 'up', icon: TrendingUp },
   ]
 
@@ -68,6 +92,116 @@ export default function Dashboard() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Charts Row 1: ROI & Funnel */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* ROI Trend Chart */}
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">ROI Trend (7 Days)</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={roiData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="date" stroke="#6B7280" fontSize={12} />
+                <YAxis stroke="#6B7280" fontSize={12} domain={[0, 'auto']} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #E5E7EB', borderRadius: '8px' }}
+                  formatter={(value: number) => [`${value}x`, 'ROAS']}
+                />
+                <Line type="monotone" dataKey="roas" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Conversion Funnel */}
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Conversion Funnel</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={funnelData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis type="number" stroke="#6B7280" fontSize={12} />
+                <YAxis dataKey="name" type="category" stroke="#6B7280" fontSize={12} width={100} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #E5E7EB', borderRadius: '8px' }}
+                  formatter={(value: number) => [value.toLocaleString(), 'Count']}
+                />
+                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                  {funnelData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Row 2: Budget & Channel Distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Budget Gauge */}
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Budget Utilization</h3>
+          <div className="h-64 flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={budgetData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  <Cell fill="#3B82F6" />
+                  <Cell fill="#E5E7EB" />
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-gray-900">{stats.budgetUsed}%</div>
+              <div className="text-sm text-gray-500">of $10,000</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Channel Distribution */}
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Spend by Channel</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'Google', value: 45, color: '#4285F4' },
+                    { name: 'Facebook', value: 25, color: '#1877F2' },
+                    { name: 'LinkedIn', value: 15, color: '#0A66C2' },
+                    { name: 'Other', value: 15, color: '#9CA3AF' },
+                  ]}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  dataKey="value"
+                  label={({ name, value }) => `${name}: ${value}%`}
+                >
+                  {[
+                    { name: 'Google', value: 45, color: '#4285F4' },
+                    { name: 'Facebook', value: 25, color: '#1877F2' },
+                    { name: 'LinkedIn', value: 15, color: '#0A66C2' },
+                    { name: 'Other', value: 15, color: '#9CA3AF' },
+                  ].map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
       {/* Recent Campaigns */}
