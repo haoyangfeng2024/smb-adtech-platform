@@ -178,6 +178,25 @@ curl -X POST http://localhost:8000/api/v1/bidding/bid \
   }'
 ```
 
+## User Interface & Visual Insights
+
+The platform provides an intuitive, professional dashboard designed specifically for non-technical SMB owners.
+
+### Performance Monitoring
+![Dashboard Overview](docs/screenshots/dashboard-v1.png)
+*The main dashboard surfaces key performance indicators (KPIs) and real-time trends.*
+
+- **XAI (Explainable AI) Bidding Curve**: A live chart powered by the **PPO RL Agent** that demonstrates strategy transparency by showing real-time bid adjustments (δ). This "Strategy Accountability" feature allows users to see exactly how the AI is optimizing their budget.
+- **ROI Trend Analysis**: A comparative line chart showing **Actual ROI** vs. **ML-Projected ROI**, allowing business owners to validate the performance gains from the AI bidding engine.
+- **Conversion Funnel**: A visual breakdown from Impressions to Clicks to Conversions, identifying potential bottlenecks in the advertising journey.
+
+### Strategic Campaign Creation
+![Campaign Creation](docs/screenshots/campaign-create-v1.png)
+*A streamlined 3-step process to launch high-performance campaigns.*
+
+- **AI-Generated Creatives**: Integration with the LLM assistant to generate ad copies based on a simple business description.
+- **Precision Targeting**: Sophisticated geographical and device-level targeting settings translated into anonymized audience segments via the **GNN Ad Graph**.
+
 ## Project Structure
 
 ```
