@@ -8,45 +8,128 @@ on:
   workflow_dispatch:
 
 jobs:
+  # ─────────────────────────────────────────────
+  # Lint & Code Quality
+  # ─────────────────────────────────────────────
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install linting tools
+        run: |
+          pip install flake8 black isort
+
+      - name: Check Python syntax
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Check code formatting (Black)
+        run: black --check .
+
+      - name: Check import order (isort)
+        run: isort --check-only .
+
+  # ─────────────────────────────────────────────
+  # Security Scan
+  # ─────────────────────────────────────────────
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check for security vulnerabilities (pip-audit)
+        run: pip install pip-audit && pip-audit
+
+      - name: Run Bandit security scan
+        run: pip install bandit && bandit -r ml/ api/ -f json
+
+  # ─────────────────────────────────────────────
+  # Tests
+  # ─────────────────────────────────────────────
   test:
     runs-on: ubuntu-latest
     
     services:
-      # 启动 Redis 容器用于集成测试
       redis:
         image: redis:7-alpine
         ports:
           - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8 pytest pytest-asyncio
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio pytest-cov
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    - name: Lint with flake8
-      run: |
-        # 停止构建：如果存在语法错误或未定义的名称
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # 退出状态 0：所有警告视为信息性，不中断构建
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+      - name: Run tests with coverage
+        env:
+          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: sqlite+aiosqlite:///./test.db
+        run: |
+          pytest tests/ -v --cov=. --cov-report=xml
 
-    - name: Run unit tests with pytest
-      env:
-        REDIS_URL: redis://localhost:6379/0
-        DATABASE_URL: sqlite+aiosqlite:///./test.db
-      run: |
-        pytest tests/ -v
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+
+  # ─────────────────────────────────────────────
+  # Frontend Build
+  # ─────────────────────────────────────────────
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run frontend linter
+        working-directory: ./frontend
+        run: npm run lint || true
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+  # ─────────────────────────────────────────────
+  # Release (only on tags)
+  # ─────────────────────────────────────────────
+  release:
+    needs: [lint, security, test, frontend]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
