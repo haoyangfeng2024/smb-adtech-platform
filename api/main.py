@@ -15,6 +15,7 @@ from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_
 from starlette.responses import Response
 
 from api.routers import campaigns, bidding
+from fastapi.openapi.utils import get_openapi
 
 # ─────────────────────────────────────────────
 # 结构化日志配置
@@ -80,6 +81,15 @@ async def lifespan(app: FastAPI):
 # ─────────────────────────────────────────────
 # FastAPI 应用实例
 # ─────────────────────────────────────────────
+
+# OAuth2 Security Scheme for Swagger UI
+security_scheme = {
+    "type": "http",
+    "scheme": "bearer",
+    "bearerFormat": "JWT",
+    "description": "Enter JWT token. Example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+
 app = FastAPI(
     title="SMB AdTech Platform API",
     description="""
@@ -92,7 +102,12 @@ app = FastAPI(
     - **ML**: 自动化竞价优化
 
     ## 认证
-    使用 Bearer Token（JWT）认证。
+    使用 Bearer Token（JWT）认证。在 Swagger UI 中点击左上角 **Authorize** 按钮输入 token。
+
+    ## 在线文档
+    - Swagger UI: `/docs`
+    - ReDoc: `/redoc`
+    - OpenAPI JSON: `/openapi.json`
     """,
     version="0.1.0",
     lifespan=lifespan,
@@ -207,6 +222,54 @@ async def readiness_check():
 async def metrics():
     """暴露 Prometheus 格式指标"""
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+# ─────────────────────────────────────────────
+# OpenAPI Schema Endpoint
+# ─────────────────────────────────────────────
+
+@app.get("/openapi.json", tags=["system"], summary="OpenAPI Schema (JSON)")
+async def get_openapi_json():
+    """导出完整的 OpenAPI 3.0 规范（JSON 格式）"""
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    
+    # 添加 Security Scheme
+    openapi_schema["components"]["securitySchemes"] = {
+        "Bearer": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "JWT token for API authentication"
+        }
+    }
+    
+    # 全局应用 Security
+    for path in openapi_schema["paths"].values():
+        for method in path.values():
+            if isinstance(method, dict) and "responses" in method:
+                method["security"] = [{"Bearer": []}]
+    
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+@app.get("/openapi.yaml", tags=["system"], summary="OpenAPI Schema (YAML)")
+async def get_openapi_yaml():
+    """导出完整的 OpenAPI 3.0 规范（YAML 格式）"""
+    import yaml
+    openapi_json = await get_openapi_json()
+    return Response(
+        content=yaml.dump(openapi_json, sort_keys=False),
+        media_type="application/x-yaml"
+    )
 
 
 # ─────────────────────────────────────────────

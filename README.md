@@ -260,6 +260,78 @@ The platform utilizes a multi-model ML stack for high-precision ad targeting and
 - [ ] Real-time reporting dashboard
 - [ ] e-commerce conversion tracking
 
+## API Documentation
+
+### Endpoints Overview
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Health check |
+| GET | `/ready` | Readiness check |
+| GET | `/metrics` | Prometheus metrics |
+| GET | `/openapi.json` | OpenAPI schema (JSON) |
+| GET | `/openapi.yaml` | OpenAPI schema (YAML) |
+| GET | `/docs` | Swagger UI |
+| GET | `/redoc` | ReDoc UI |
+| GET | `/api/v1/campaigns` | List campaigns |
+| POST | `/api/v1/campaigns` | Create campaign |
+| GET | `/api/v1/campaigns/{id}` | Get campaign |
+| PUT | `/api/v1/campaigns/{id}` | Update campaign |
+| DELETE | `/api/v1/campaigns/{id}` | Delete campaign |
+| POST | `/api/v1/bid` | Bid decision endpoint |
+
+### Authentication
+
+All API endpoints (except `/health`, `/ready`, `/metrics`) require Bearer token authentication.
+
+**In Swagger UI**: Click the **Authorize** button at the top and enter your JWT token.
+
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  https://api.smb-adtech.com/api/v1/campaigns
+```
+
+### OpenAPI Schema
+
+The complete API schema is available in two formats:
+
+- **JSON**: `/openapi.json`
+- **YAML**: `/openapi.yaml`
+
+Import the schema into tools like Postman, Insomnia, or Swagger Editor for client generation.
+
+### Example: Bid Request
+
+```json
+POST /api/v1/bid
+{
+  "bid_request": {
+    "id": "abc123",
+    "device": {"type": "mobile", "os": "ios"},
+    "geo": {"country": "US", "region": "CA"},
+    "ad_slot": {"size": "300x250", "format": "banner"}
+  },
+  "campaign_id": "camp_123",
+  "max_bid": 2.50
+}
+```
+
+### Example: Create Campaign
+
+```json
+POST /api/v1/campaigns
+{
+  "name": "Summer Sale",
+  "budget_daily": 100.00,
+  "targeting": {
+    "geo": ["US", "CA"],
+    "device": ["mobile", "desktop"]
+  }
+}
+```
+
+---
+
 ## License
 
 MIT
