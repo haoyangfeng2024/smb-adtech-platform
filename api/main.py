@@ -199,8 +199,27 @@ app.include_router(bidding.router, prefix="/api/v1")
 
 @app.get("/health", tags=["system"], summary="健康检查")
 async def health_check():
-    """Kubernetes liveness probe"""
-    return {"status": "ok", "version": app.version}
+    """Kubernetes liveness probe - enhanced with ML model status"""
+    # Check ML model status
+    model_status = {"pytorch": "unavailable", "sklearn": "unavailable"}
+    
+    try:
+        from api.services.bidding_service import get_bidding_service
+        svc = get_bidding_service()
+        
+        # Check PyTorch models
+        if hasattr(svc, 'deep_ctr_model') and svc.deep_ctr_model is not None:
+            model_status["pytorch"] = "loaded"
+        elif hasattr(svc, 'gbm_model') and svc.gbm_model is not None:
+            model_status["sklearn"] = "loaded"
+    except Exception:
+        pass
+    
+    return {
+        "status": "ok", 
+        "version": app.version,
+        "models": model_status
+    }
 
 
 @app.get("/ready", tags=["system"], summary="就绪检查")
